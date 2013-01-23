@@ -1,0 +1,5 @@
+- BUG: if the argument matches more than one device the script failes
+- FEATURE: log shutdown invokes so one can see whether the time is to short
+- FEATURE: print_usage/help
+- TODO: make lintian happy
+- TODO: stop sdparm from poluting stdout/stderr
