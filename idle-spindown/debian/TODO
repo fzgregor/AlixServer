@@ -3,3 +3,6 @@
 - FEATURE: print_usage/help
 - TODO: make lintian happy
 - TODO: stop sdparm from poluting stdout/stderr
+- BUG: if state file not there error is still printed...
+- BUG: monitore complete drive (sda) not only a partition (sda3)
+- BUG: bklid issus a read -> harddrive is never ever spon down
