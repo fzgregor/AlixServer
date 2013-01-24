@@ -13,26 +13,76 @@
 # - check for root
 # - also support uuids to identify sdX
 
+print_help() {
+	echo "Usage: idle-spindown [-hln] DEVICE-PATTERN" 1>&2
+	echo "Spins down a idle drive." 1>&2
+	echo "" 1>&2
+	echo "  DEVICE-PATTERN  unique part of /dev/sdX, /dev/hdX or UUID" 1>&2
+	echo "                  if more than one device matches one is choosen" 1>&2
+	echo "  -l              log shutdown events and errors to syslog" 1>&2
+	echo "  -n              don't show results" 1>&2
+	echo "  -h              print this help text" 1>&2
+	echo "" 1>&2
+	echo "Example usage:" 1>&2
+	echo "idle-spindown sdb # device path part" 1>&2
+	echo "idle-spindown 44ef7a58-25a7 # uuid part" 1>&2
+}
+
+# A POSIX variable
+OPTIND=1         # Reset in case getopts has been used previously in the shell.
+
+# Initialize our own variables:
+print="1"
+log="0"
+
+while getopts "nhl" opt; do
+    case "$opt" in
+    h)
+        print_help
+        exit 0
+        ;;
+    l)  log="1"
+        ;;
+    n)  print="0"
+        ;;
+    esac
+done
+
+shift $((OPTIND-1))
+
+[ "$1" = "--" ] && shift
+
+log(){
+	/usr/bin/logger -t idle-spindown "$1"
+}
+
+notice(){
+	if [ $print -eq "1" ]; then
+		echo $1
+	fi
+}
+
+log_notice(){
+	if [ $print -eq "1" ]; then
+		echo $1
+	fi
+	if [ $log -eq "1" ]; then
+		log "$1"
+	fi
+}
 
 # check permissions (root)
 if [ "$(id -u)" != "0" ]; then
-echo "This script must be run as root" 1>&2
-exit 1
+	echo "This script must be run as root" 1>&2
+	exit 1
 fi
 
 # check argument
 if [ ! $1 ]; then
-echo "Usage: idle-spindown DEVICE-PATTERN" 1>&2
-echo "Spins down a idle drive." 1>&2
-echo "" 1>&2
-echo "	DEVICE-PATTERN	unique part of /dev/sdX, /dev/hdX or UUID" 1>&2
-echo "			if more than one device matches one is choosen" 1>&2
-echo "" 1>&2
-echo "Example usage:" 1>&2
-echo "idle-spindown sdb # device path part" 1>&2
-echo "idle-spindown 44ef7a58-25a7 # uuid part" 1>&2
-echo "Please provide DEVICE-PATTERN"
-exit 1
+	print_help
+	echo "" 1>&2
+	echo "Please provide DEVICE-PATTERN" 1>&2
+	exit 1
 fi
 
 #convert UUID to ID
@@ -50,7 +100,15 @@ NEWstate=$(cat -A /proc/diskstats | grep "$disk ")
 # if no changes, power down and previous state
 test -e /tmp/idle-spindown-$disk-state.txt
 if [ $? -eq 0 ] && [ "$NEWstate" = "$(cat /tmp/idle-spindown-$disk-state.txt)" ]; then
-        /usr/bin/sdparm --flexible --command=capacity /dev/$disk > /dev/null 2>&1
+        /usr/bin/sdparm --flexible --command=stop /dev/$disk > /dev/null 2>&1
+	notice "Device was inactivy since the last invoke"
+	log_notice "Stopping device $disk"
+        if [ $? -ne 0 ]; then
+		log_notice "failed!"
+	fi
+else
+	notice "No previous device state or device was accessed in the meantime"
+	notice "No spindown command send."
 fi
 
 # Write current state to file

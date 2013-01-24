@@ -1,4 +1,3 @@
-- FEATURE: parameter to log shutdown invokes so one can see whether the time is to short
 - TODO: make lintian happy
 - BUG: bklid issus a read -> harddrive is never ever spon down
-- FEATURE: print to stdout what is happening, parameter to turn off
+- FEATURE check current state (spin, no-spin) before stopping
