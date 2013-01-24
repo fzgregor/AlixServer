@@ -30,16 +30,16 @@ disk=$(/sbin/blkid | grep $1 | cut -c 6-9)
 
 #check if the disk uuid (or sdX), or pieces of it were ok
 if [ ! -n $disk ]; then
-echo “no such disk – disk!” 1>2&
+echo “no such disk – disk!” 1>&2
 exit 1
 fi
 
 # Get new state from diskstats
 NEWstate=$(cat -A /proc/diskstats | grep $disk)
 
-# if no changes, power down
-if [ !$(test -e /tmp/idle-spindown-$disk-state.txt) ] && [ "$NEWstate" = "$(cat /tmp/idle-spindown-$disk-state.txt)" ]; then
-        /usr/bin/sdparm --flexible --command=stop /dev/$disk 2>&1 &>/dev/null
+# if no changes, power down and previous state
+if [ $(test -e /tmp/idle-spindown-$disk-state.txt) ] && [ "$NEWstate" = "$(cat /tmp/idle-spindown-$disk-state.txt)" ]; then
+        /usr/bin/sdparm --flexible --command=stop /dev/$disk &>/dev/null
 fi
 
 # Write current state to file
