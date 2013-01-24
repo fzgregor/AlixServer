@@ -26,7 +26,7 @@ exit 1
 fi
 
 #convert UUID to ID
-disk=$(/sbin/blkid | grep $1 | cut -c 6-9)
+disk=$(/sbin/blkid | grep -m 1 $1 | cut -c 6-8)
 
 #check if the disk uuid (or sdX), or pieces of it were ok
 if [ ! -n $disk ]; then
