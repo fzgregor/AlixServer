@@ -38,8 +38,9 @@ fi
 NEWstate=$(cat -A /proc/diskstats | grep $disk)
 
 # if no changes, power down and previous state
-if [ $(test -e /tmp/idle-spindown-$disk-state.txt) ] && [ "$NEWstate" = "$(cat /tmp/idle-spindown-$disk-state.txt)" ]; then
-        /usr/bin/sdparm --flexible --command=stop /dev/$disk &>/dev/null
+test -e /tmp/idle-spindown-$disk-state.txt
+if [ $? -eq 0 ] && [ "$NEWstate" = "$(cat /tmp/idle-spindown-$disk-state.txt)" ]; then
+        /usr/bin/sdparm --flexible --command=capacity /dev/$disk > /dev/null 2>&1
 fi
 
 # Write current state to file
