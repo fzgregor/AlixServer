@@ -35,7 +35,7 @@ exit 1
 fi
 
 # Get new state from diskstats
-NEWstate=$(cat -A /proc/diskstats | grep $disk)
+NEWstate=$(cat -A /proc/diskstats | grep "$disk ")
 
 # if no changes, power down and previous state
 test -e /tmp/idle-spindown-$disk-state.txt
