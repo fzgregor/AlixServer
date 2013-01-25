@@ -1,3 +1,2 @@
 - TODO: make lintian happy
-- BUG: bklid issus a read -> harddrive is never ever spon down
 - FEATURE check current state (spin, no-spin) before stopping

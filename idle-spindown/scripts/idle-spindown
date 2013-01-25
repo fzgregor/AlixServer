@@ -14,11 +14,11 @@
 # - also support uuids to identify sdX
 
 print_help() {
-	echo "Usage: idle-spindown [-hln] DEVICE-PATTERN" 1>&2
+	echo "Usage: idle-spindown [-hln] -d DEVICE | -u UUID" 1>&2
 	echo "Spins down a idle drive." 1>&2
 	echo "" 1>&2
-	echo "  DEVICE-PATTERN  unique part of /dev/sdX, /dev/hdX or UUID" 1>&2
-	echo "                  if more than one device matches one is choosen" 1>&2
+	echo "	-d DEVICE	give a device node e.g. /dev/sdb" 1>&2
+	echo "	-u UUID		give a partition UUID" 1>&2
 	echo "  -l              log shutdown events and errors to syslog" 1>&2
 	echo "  -n              don't show results" 1>&2
 	echo "  -h              print this help text" 1>&2
@@ -34,9 +34,13 @@ OPTIND=1         # Reset in case getopts has been used previously in the shell.
 # Initialize our own variables:
 print="1"
 log="0"
+device=""
+uuid=""
 
-while getopts "nhl" opt; do
+while getopts "nhld:u:" opt; do
     case "$opt" in
+    \?) exit 1
+	;;
     h)
         print_help
         exit 0
@@ -45,6 +49,10 @@ while getopts "nhl" opt; do
         ;;
     n)  print="0"
         ;;
+    u)  uuid=$OPTARG
+        ;;
+    d)  device=$OPTARG
+	;;
     esac
 done
 
@@ -77,32 +85,38 @@ if [ "$(id -u)" != "0" ]; then
 	exit 1
 fi
 
-# check argument
-if [ ! $1 ]; then
-	print_help
-	echo "" 1>&2
-	echo "Please provide DEVICE-PATTERN" 1>&2
+# check options
+if [ "$device" != "" ] && [ "$uuid" != "" ]; then
+	echo "You have to choose between giving a device or a partition uuid!" 1>&2
 	exit 1
 fi
 
-#convert UUID to ID
-disk=$(/sbin/blkid | grep -m 1 $1 | cut -c 6-8)
-
-#check if the disk uuid (or sdX), or pieces of it were ok
-if [ ! $disk ]; then
-echo "Couldn't find device! Please check your DEVICE-PATTERN." 1>&2
-exit 1
+# turn uuid into device
+if [ "$uuid" != "" ]; then
+	device=$(readlink -f /dev/disk/by-uuid/$uuid | cut -b 1-8)
+        if [ ! -b $device ]; then
+		echo "There is no partition with UUID $uuid!" 1>&2
+		exit 1
+	fi
 fi
 
+# check device
+if [ ! -e $device  ]; then
+	echo "No device found at $device" 1>&2
+	exit 1
+fi
+
+device=$(echo "$device" | cut -b 6-8)
+
 # Get new state from diskstats
-NEWstate=$(cat -A /proc/diskstats | grep "$disk ")
+NEWstate=$(cat -A /proc/diskstats | grep -m 1 "$device")
 
 # if no changes, power down and previous state
-test -e /tmp/idle-spindown-$disk-state.txt
-if [ $? -eq 0 ] && [ "$NEWstate" = "$(cat /tmp/idle-spindown-$disk-state.txt)" ]; then
-        /usr/bin/sg_start --stop --readonly /dev/$disk > /dev/null 2>&1
+test -e /tmp/idle-spindown-$device-state.txt
+if [ $? -eq 0 ] && [ "$NEWstate" = "$(cat /tmp/idle-spindown-$device-state.txt)" ]; then
+        /usr/bin/sg_start --stop --readonly /dev/$device > /dev/null 2>&1
 	notice "Device was inactivy since the last invoke"
-	log_notice "Stopping device $disk"
+	log_notice "Stopping device $device"
         if [ $? -ne 0 ]; then
 		log_notice "failed!"
 	fi
@@ -112,4 +126,4 @@ else
 fi
 
 # Write current state to file
-echo "$NEWstate" > /tmp/idle-spindown-$disk-state.txt
+echo "$NEWstate" > /tmp/idle-spindown-$device-state.txt
