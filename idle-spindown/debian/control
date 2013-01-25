@@ -5,6 +5,6 @@ Build-Depends: debhelper (>= 5)
 
 Package: idle-spindown
 Architecture: all
-Depends: sdparm
+Depends: sg3-utils
 Description: idle-spindown provides a script which will spin down harddrives when they are idle.
  You have to configure /etc/cron.d/idle-spindown to your specific needs (idle time, harddrives).
